@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Relief Map-reading Revision Hub</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* =====  基本視覺 ===== */
+:root{
+ --pri:#2f7de1;--sec:#f55;--bg:#f6f8fa;--card:#fff;
+ --r:12px;--sh:0 4px 12px rgba(0,0,0,.08);
+ --font:"Segoe UI","PingFang TC",sans-serif
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:#222;line-height:1.55}
+h1,h2{color:var(--pri);margin-bottom:.5rem}
+.container{max-width:1080px;margin:auto;padding:1rem}
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:1rem;margin:1rem 0}
+button{cursor:pointer;border:none;border-radius:var(--r);padding:.55rem 1rem;font-size:1rem}
+.btn{background:var(--pri);color:#fff}.btn.alt{background:var(--sec)}
+/* 標籤頁 */
+.tabs{display:flex;gap:.5rem;flex-wrap:wrap}
+.tabBtn{background:#ddd;color:#000;padding:.5rem 1rem;border-radius:var(--r)}
+.tabBtn.active{background:var(--pri);color:#fff}
+.tabPane{display:none}.tabPane.active{display:block}
+
+/* Flashcards */
+.flash{display:none;text-align:center;padding:1rem;font-size:1.04rem}
+.flash.active{display:block}
+.controls{display:flex;justify-content:center;gap:.5rem;margin-top:.7rem}
+
+/* 圖形區 */
+canvas{display:block;margin:1rem auto;border:1px solid #999;background:#eef}
+#basicCanvas{width:320px;height:160px;max-width:100%}
+#slopeCan{width:360px;height:180px;max-width:100%}
+#featureCan{width:320px;height:240px;max-width:100%}
+
+/* Quiz */
+.q-card{border:1px solid #ddd;border-radius:var(--r);padding:.7rem;margin-bottom:.6rem}
+input[type=number],input[type=text],select{padding:.35rem;border:1px solid #ccc;border-radius:8px}
+#scoreArea{font-weight:700;margin-top:.6rem}
+
+@media(min-width:650px){.flex2{display:flex;gap:1rem}.flex2>.card{flex:1}}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Relief Map-reading Revision Hub</h1>
+
+  <!-- ===== Tab navigation ===== -->
+  <div class="tabs">
+    <div class="tabBtn active" data-tab="basics">1. Relief Basics</div>
+    <div class="tabBtn" data-tab="features">2. Identify Features</div>
+    <div class="tabBtn" data-tab="quiz">3. Mixed Quiz</div>
+  </div>
+
+  <!-- ===== 1. BASICS ===== -->
+  <div class="tabPane active" id="basics">
+    <!-- 1A Flashcards -->
+    <div class="card">
+      <h2>Flash-cards：3 ways to show relief + V.I.</h2>
+      <div id="flashBasicWrap">
+        <div class="flash active">Colouring：Green → lowland；Brown → highland。Good for quick height zones.</div>
+        <div class="flash">Contouring：Lines join points of equal height. By reading spacing we infer slope.</div>
+        <div class="flash">Conventional signs：spot height「+182」、三角測站△ etc. show exact figures.</div>
+        <div class="flash">Vertical Interval (V.I.)：height difference between two consecutive contour lines.</div>
+        <div class="flash">Coastline = 0 m contour line.</div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="bPrev">← Prev</button>
+        <button class="btn" id="bNext">Next →</button>
+      </div>
+    </div>
+
+    <!-- 1B Colouring interactive -->
+    <div class="flex2">
+      <div class="card">
+        <h2>Colouring Check</h2>
+        <canvas id="basicCanvas" width="320" height="160"></canvas>
+        <p style="text-align:center">Which colour normally shows <b>high</b> land?<br>
+          <select id="colAns">
+            <option>choose…</option><option>green</option><option>brown</option>
+          </select>
+          <button class="btn alt" id="colChk">Check</button>
+        </p>
+        <div id="colFB" style="text-align:center;margin-top:.4rem;font-weight:600"></div>
+      </div>
+
+      <!-- 1C Slope spacing -->
+      <div class="card">
+        <h2>Contour Spacing Simulator</h2>
+        <canvas id="slopeCan" width="360" height="180"></canvas>
+        <label style="display:block;text-align:center">Steep&nbsp;←
+          <input type="range" min="6" max="60" value="25" id="sRange">→&nbsp;Gentle&nbsp;(px spacing)
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 2. FEATURES ===== -->
+  <div class="tabPane" id="features">
+    <!-- 2A Flashcards -->
+    <div class="card">
+      <h2>Flash-cards：Common Relief Features</h2>
+      <div id="flashFeatWrap">
+        <div class="flash active">Concave slope：upper contours close (steep) → lower wide (gentle)。Gradient decreases downslope.</div>
+        <div class="flash">Convex slope：upper wide → lower close。Gradient increases downslope。</div>
+        <div class="flash">Cliff：contours extremely close / touching → vertical slope。</div>
+        <div class="flash">Spur：contours bend towards <u>lower</u> ground (指向低處)。</div>
+        <div class="flash">Valley：contours bend towards <u>higher</u> ground；常有河流。</div>
+        <div class="flash">Hill：concentric closed contours；可圓頂、錐形、平頂。</div>
+        <div class="flash">Ridge：elongated high land；密集且窄長的等高線。</div>
+        <div class="flash">Saddle：shallow gap between two peaks。</div>
+        <div class="flash">Pass：deep narrow gap (峽道)。</div>
+        <div class="flash">Plateau：large flat land at high elevation；少數高值等高線。</div>
+        <div class="flash">Basin：flat land surrounded by higher ground；等高線向外增高。</div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="fPrev">← Prev</button>
+        <button class="btn" id="fNext">Next →</button>
+      </div>
+    </div>
+
+    <!-- 2B Identify pattern -->
+    <div class="card">
+      <h2>Identify the Contour Pattern</h2>
+      <canvas id="featureCan" width="320" height="240"></canvas>
+      <div style="text-align:center">
+        This pattern is a&nbsp;
+        <select id="featSel">
+          <option>choose…</option><option>concave slope</option><option>convex slope</option><option>cliff</option>
+          <option>spur</option><option>valley</option><option>hill</option><option>ridge</option>
+          <option>saddle</option><option>pass</option><option>plateau</option><option>basin</option>
+        </select>
+        <button class="btn alt" id="featChk">Check</button>
+        <div id="featFB" style="margin-top:.4rem;font-weight:600"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 3. MIXED QUIZ ===== -->
+  <div class="tabPane" id="quiz">
+    <div class="card">
+      <h2>10-question Mixed Quiz</h2>
+      <form id="quizForm">
+        <div class="q-card">1. Green colour on a physical map usually indicates ______ land.<br>
+          <label><input type="radio" name="q1" value="low"> Low</label>
+          <label><input type="radio" name="q1" value="high"> High</label>
+        </div>
+        <div class="q-card">2. The coastline is the <input type="number" name="q2" style="width:75px"> m contour line.</div>
+        <div class="q-card">3. Contours join points of <input type="text" name="q3" placeholder="same / different" style="width:120px"> height.</div>
+        <div class="q-card">4. V.I. stands for <input type="text" name="q4" placeholder="______ Interval"></div>
+        <div class="q-card">5. Upper steep, lower gentle = ______ slope (concave / convex).</div>
+        <input type="text" name="q5">
+        <div class="q-card">6. Contours bending to lower ground form a ______.</div>
+        <input type="text" name="q6">
+        <div class="q-card">7. A long narrow highland = ______.</div>
+        <input type="text" name="q7">
+        <div class="q-card">8. Flat land at high elevation is a ______.</div>
+        <input type="text" name="q8">
+        <div class="q-card">9. Extremely close contours indicate a ______.</div>
+        <input type="text" name="q9">
+        <div class="q-card">10. Flat land surrounded by higher ground = ______.</div>
+        <input type="text" name="q10">
+        <button class="btn" type="submit">Submit</button>
+      </form>
+      <div id="scoreArea"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= JS ================= -->
+<script>
+/* ===== 工具函式 ===== */
+const qs=e=>document.querySelector(e),qsa=e=>[...document.querySelectorAll(e)];
+
+/* ===== Tab switching ===== */
+qsa('.tabBtn').forEach(btn=>{
+  btn.onclick=()=>{
+    qsa('.tabBtn').forEach(b=>b.classList.remove('active'));
+    qsa('.tabPane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    qs('#'+btn.dataset.tab).classList.add('active');
+  };
+});
+
+/* ===== Flashcard controls ===== */
+function flashControls(prevBtn,nextBtn,wrapSel){
+  let idx=0,arr=qsa(`${wrapSel} .flash`);
+  const show=i=>{arr.forEach(f=>f.classList.remove('active'));arr[i].classList.add('active')};
+  qs(prevBtn).onclick=()=>{idx=(idx-1+arr.length)%arr.length;show(idx)};
+  qs(nextBtn).onclick=()=>{idx=(idx+1)%arr.length;show(idx)};
+}
+flashControls('#bPrev','#bNext','#flashBasicWrap');
+flashControls('#fPrev','#fNext','#flashFeatWrap');
+
+/* ===== Colouring canvas ===== */
+const c=qs('#basicCanvas'),ctx=c.getContext('2d');
+function drawColourMap(){
+ ctx.fillStyle="#74c476";ctx.fillRect(0,0,90,160); // 0-100
+ ctx.fillStyle="#c2e699";ctx.fillRect(90,0,90,160); // 100-200 (light green)
+ ctx.fillStyle="#e5bb7f";ctx.fillRect(180,0,90,160); // 200-400 (light brown)
+ ctx.fillStyle="#a26b3c";ctx.fillRect(270,0,50,160); // >400 (dark brown)
+ ctx.fillStyle="#000";ctx.font="12px sans-serif";
+ ctx.fillText("0-100 m",15,20);ctx.fillText("100-200 m",95,20);
+ ctx.fillText("200-400 m",185,20);ctx.fillText(">400 m",285,20);
+}
+drawColourMap();
+qs('#colChk').onclick=()=>{
+ const sel=qs('#colAns').value,fb=qs('#colFB');
+ if(sel==="choose…"){alert("Select an answer");return}
+ fb.textContent=sel==="brown"?"✅ Correct!":"❌ Actually high land = brown.";
+ fb.style.color=sel==="brown"?"green":"var(--sec)";
+ setTimeout(()=>{fb.textContent="";qs('#colAns').selectedIndex=0},2000);
+};
+
+/* ===== Contour spacing simulator ===== */
+const sCan=qs('#slopeCan'),sCtx=sCan.getContext('2d');
+function drawSlope(sp){sCtx.clearRect(0,0,sCan.width,sCan.height);
+ sCtx.fillStyle="#dcebff";sCtx.fillRect(0,0,sCan.width,sCan.height);
+ sCtx.strokeStyle="#444";
+ for(let y=sp;y<sCan.height;y+=sp){sCtx.beginPath();sCtx.moveTo(0,y);sCtx.lineTo(sCan.width,y);sCtx.stroke();}
+ sCtx.font="12px sans-serif";sCtx.fillStyle="#000";sCtx.fillText("Closer = steeper",8,14);}
+qs('#sRange').oninput=e=>drawSlope(e.target.value);drawSlope(qs('#sRange').value);
+
+/* ===== Feature Identify ===== */
+const featCan=qs('#featureCan'),pCtx=featCan.getContext('2d');
+const patterns=[
+ {t:"hill",d:()=>{pCtx.translate(160,120);for(let r=30;r<=90;r+=15){pCtx.beginPath();pCtx.ellipse(0,0,r,r*0.6,0,0,Math.PI*2);pCtx.stroke();}pCtx.resetTransform();}},
+ {t:"concave slope",d:()=>{for(let y=40,inc=4;y<200;y+=inc,inc+=1.5){pCtx.beginPath();pCtx.moveTo(30,y);pCtx.lineTo(290,y);pCtx.stroke();}}},
+ {t:"convex slope",d:()=>{for(let y=40,inc=15;y<200;y+=inc,inc-=1.5){pCtx.beginPath();pCtx.moveTo(30,y);pCtx.lineTo(290,y);pCtx.stroke();}}},
+ {t:"spur",d:()=>{for(let i=0;i<6;i++){pCtx.beginPath();pCtx.moveTo(160,20+i*20);pCtx.quadraticCurveTo(260,60+i*20,160,100+i*20);pCtx.stroke();}}},
+ {t:"valley",d:()=>{for(let i=0;i<6;i++){pCtx.beginPath();pCtx.moveTo(160,20+i*20);pCtx.quadraticCurveTo(60,60+i*20,160,100+i*20);pCtx.stroke();}}},
+ {t:"cliff",d:()=>{for(let x=150;x<=170;x+=3){pCtx.beginPath();pCtx.moveTo(x,20);pCtx.lineTo(x,220);pCtx.stroke();}}},
+ {t:"ridge",d:()=>{for(let i=0;i<6;i++){pCtx.beginPath();pCtx.moveTo(80+i*15,20);pCtx.lineTo(80+i*15,220);pCtx.stroke();}}},
+ {t:"plateau",d:()=>{pCtx.translate(160,120);for(let r=30;r<=90;r+=15){pCtx.beginPath();pCtx.ellipse(0,0,r,r*0.55,0,0,Math.PI*2);pCtx.stroke();}pCtx.fillStyle="#eef";pCtx.fillRect(-60,-10,120,20);pCtx.resetTransform();}},
+ {t:"basin",d:()=>{pCtx.translate(160,120);for(let r=30;r<=90;r+=15){pCtx.beginPath();pCtx.ellipse(0,0,r,r*0.55,0,0,Math.PI*2);pCtx.stroke();}
+   pCtx.beginPath();pCtx.fillStyle="#eef";pCtx.ellipse(0,0,25,12,0,0,Math.PI*2);pCtx.fill();pCtx.resetTransform();}},
+ {t:"saddle",d:()=>{pCtx.translate(0,0);pCtx.beginPath();pCtx.moveTo(30,150);pCtx.quadraticCurveTo(160,50,290,150);pCtx.stroke();
+   pCtx.beginPath();pCtx.moveTo(30,170);pCtx.quadraticCurveTo(160,70,290,170);pCtx.stroke();}},
+ {t:"pass",d:()=>{pCtx.beginPath();pCtx.moveTo(80,20);pCtx.lineTo(80,220);pCtx.lineTo(240,220);pCtx.lineTo(240,20);pCtx.stroke();
+   pCtx.fillStyle="#eef";pCtx.fillRect(80,90,160,60);} }
+];
+let curPat;
+function newPat(){pCtx.clearRect(0,0,featCan.width,featCan.height);pCtx.lineWidth=1.4;pCtx.strokeStyle="#795548";
+ curPat=patterns[Math.floor(Math.random()*patterns.length)];curPat.d();}
+newPat();
+qs('#featChk').onclick=()=>{
+ const sel=qs('#featSel').value,fb=qs('#featFB');
+ if(sel==="choose…"){alert("Select");return}
+ fb.textContent=sel===curPat.t?"✅ Correct!":`❌ It's a ${curPat.t}.`;
+ fb.style.color=sel===curPat.t?"green":"var(--sec)";
+ setTimeout(()=>{fb.textContent="";newPat();qs('#featSel').selectedIndex=0},2200);
+};
+
+/* ===== Mixed Quiz ===== */
+const ans={q1:"low",q2:"0",q3:"same",q4:"Vertical",q5:"concave",q6:"spur",q7:"ridge",q8:"plateau",q9:"cliff",q10:"basin"};
+qs('#quizForm').onsubmit=e=>{
+ e.preventDefault();const data=new FormData(e.target);let sc=0;
+ for(let k in ans){if((data.get(k)||"").toLowerCase().trim()===ans[k])sc++;}
+ qs('#scoreArea').textContent=`You scored ${sc}/10`;
+ qs('#scoreArea').style.color=sc>=8?"green":"var(--sec)";
+ localStorage.setItem('reliefMixScore',sc);
+};
+</script>
+</body>
+</html>
